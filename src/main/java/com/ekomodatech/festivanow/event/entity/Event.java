@@ -21,6 +21,9 @@ public class Event {
     private long ability;
     private String description;
     private String type;
+    private String url;
+    private String state;
+
      @ManyToOne()
     @JoinColumn(name = "id_City")
     City city;
@@ -31,12 +34,14 @@ public class Event {
 
     public Event() {
     }
-    public Event(String name, Date date, long ability, String description, String type) {
+    public Event(String name, Date date, long ability, String description, String type, String url, String state ) {
         this.name = name;
         this.date = date;
         this.ability = ability;
         this.description = description;
         this.type = type;
+        this.url = url;
+        this.state = state;
     }
     public long getIdEvent() {
         return idEvent;
@@ -86,7 +91,16 @@ public class Event {
     public void setLogistic(Logistic logistic) {
         this.logistic = logistic;
     }
-
-
-    
+     public String getUrl() {
+        return url;
+    }
+    public void setUrl(String url) {
+        this.url = url;
+    }
+    public String getState() {
+        return state;
+    }
+    public void setState(String state) {
+        this.state = state;
+    }
 }

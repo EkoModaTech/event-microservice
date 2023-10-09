@@ -2,98 +2,150 @@ package com.ekomodatech.festivanow.event.controller;
 
 import java.util.List;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.ResponseEntity;
 
-import com.ekomodatech.festivanow.event.entity.Authority;
-import com.ekomodatech.festivanow.event.entity.Event;
+import org.springframework.http.HttpStatus;
+
 import com.ekomodatech.festivanow.event.entity.Permission;
-import com.ekomodatech.festivanow.event.repository.AuthorityRepository;
-import com.ekomodatech.festivanow.event.repository.EventRepository;
 import com.ekomodatech.festivanow.event.repository.PermissionRepository;
+import com.ekomodatech.festivanow.event.entity.Authority;
+import com.ekomodatech.festivanow.event.repository.AuthorityRepository;
+import com.ekomodatech.festivanow.event.entity.Event;
+import com.ekomodatech.festivanow.event.repository.EventRepository;
 
 @RestController
 @RequestMapping("/permission")
 public class PermissionController {
-   Logger log = LoggerFactory.getLogger(getClass());
     @Autowired
     private PermissionRepository permissionRepository;
+    
     @Autowired
     private AuthorityRepository authorityRepository;
-     @Autowired
+    
+    @Autowired
     private EventRepository eventRepository;
-
 
     @GetMapping("/{id}")
     @CrossOrigin(origins = "http://localhost:4200")
-    public Permission findPermission(@PathVariable Long id){
-        return permissionRepository.findById(id).orElseThrow();
+    public Permission findPermission(@PathVariable Long id) {
+        try {
+            Permission permission = permissionRepository.findById(id)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Permission not found"));
+            return permission;
+        } catch (ResponseStatusException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error", ex);
+        }
     }
-     @GetMapping("/list")
-     @CrossOrigin(origins = "http://localhost:4200")
+
+    @GetMapping("/list")
+    @CrossOrigin(origins = "http://localhost:4200")
     public List<Permission> listPermissions() {
-        return permissionRepository.findAll();
+        try {
+            List<Permission> permissions = permissionRepository.findAll();
+            return permissions;
+        } catch (Exception ex) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error", ex);
+        }
     }
 
     @PostMapping("/create")
-   @CrossOrigin(origins = "http://localhost:4200")
+    @CrossOrigin(origins = "http://localhost:4200")
     public Permission createPermission(@RequestBody Permission newPermission) {
-        return permissionRepository.save(newPermission);
+        try {
+            return permissionRepository.save(newPermission);
+        } catch (Exception ex) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error", ex);
+        }
     }
 
     @DeleteMapping("/delete/{id}")
-   @CrossOrigin(origins = "http://localhost:4200")
-    public void deletePermission(@PathVariable Long id) {
-        permissionRepository.deleteById(id);
-    } 
-    @PostMapping("/save")
-    public String savePermission(@ModelAttribute Permission permission, Model model){
-        permissionRepository.save(permission);
-        return "redirect:/crud/read";
+    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<Void> deletePermission(@PathVariable Long id) {
+        try {
+            permissionRepository.deleteById(id);
+            return ResponseEntity.noContent().build();
+        } catch (Exception ex) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error", ex);
+        }
     }
+
+    @PostMapping("/save")
+    public String savePermission(@ModelAttribute Permission permission, Model model) {
+        try {
+            permissionRepository.save(permission);
+            return "redirect:/crud/read";
+        } catch (Exception ex) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error", ex);
+        }
+    }
+
     @GetMapping("/update/{id}")
     @CrossOrigin(origins = "http://localhost:4200")
-    public String update(@PathVariable Long id, Model model){
-        Permission permission = permissionRepository.findById(id).orElseThrow(null);
-        model.addAttribute("permission", permission);
-        return "update";
+    public String update(@PathVariable Long id, Model model) {
+        try {
+            Permission permission = permissionRepository.findById(id)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Permission not found"));
+            model.addAttribute("permission", permission);
+            return "update";
+        } catch (Exception ex) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error", ex);
+        }
     }
+
     @GetMapping("/authority/{id}")
     @CrossOrigin(origins = "http://localhost:4200")
-    public Authority findAuthority(@PathVariable Long id){
-        return authorityRepository.findById(id).orElseThrow(null);
-        
+    public Authority findAuthority(@PathVariable Long id) {
+        try {
+            Authority authority = authorityRepository.findById(id)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Authority not found"));
+            return authority;
+        } catch (Exception ex) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error", ex);
+        }
     }
+
     @GetMapping("/ListAuthority")
     @CrossOrigin(origins = "http://localhost:4200")
-    public List<Authority> listAuthorities(){
-        return authorityRepository.findAll();
+    public List<Authority> listAuthorities() {
+        try {
+            List<Authority> authorities = authorityRepository.findAll();
+            return authorities;
+        } catch (Exception ex) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error", ex);
+        }
     }
+
     @GetMapping("/event/{id}")
     @CrossOrigin(origins = "http://localhost:4200")
-    public Event findEvent(@PathVariable Long id){
-        return eventRepository.findById(id).orElseThrow(null);
-        
+    public Event findEvent(@PathVariable Long id) {
+        try {
+            Event event = eventRepository.findById(id)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Event not found"));
+            return event;
+        } catch (Exception ex) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error", ex);
+        }
     }
+
     @GetMapping("/ListEvent")
     @CrossOrigin(origins = "http://localhost:4200")
-    public List<Event> listEvents(){
-        return eventRepository.findAll();
+    public List<Event> listEvents() {
+        try {
+            List<Event> events = eventRepository.findAll();
+            return events;
+        } catch (Exception ex) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error", ex);
+        }
     }
 
     @GetMapping("/")
-    String index(){
+    String index() {
         return "index";
     }
 }

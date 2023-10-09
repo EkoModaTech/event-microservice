@@ -5,62 +5,94 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.ekomodatech.festivanow.event.entity.Authority;
-import com.ekomodatech.festivanow.event.entity.City;
 import com.ekomodatech.festivanow.event.repository.AuthorityRepository;
-
-
 
 @RestController
 @RequestMapping("/authority")
 public class AuthorityController {
     Logger log = LoggerFactory.getLogger(getClass());
+    
     @Autowired
     private AuthorityRepository authorityRepository;
 
-
     @GetMapping("/{id}")
     @CrossOrigin(origins = "http://localhost:4200")
-    public Authority findAuthority(@PathVariable Long id){
-        return authorityRepository.findById(id).orElseThrow();
+    public ResponseEntity<Authority> findAuthority(@PathVariable Long id) {
+        try {
+            Authority authority = authorityRepository.findById(id)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Authority not found"));
+            return ResponseEntity.ok(authority);
+        } catch (ResponseStatusException ex) {
+            throw ex; // Excepción ya manejada, se relanza
+        } catch (Exception ex) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error", ex);
+        }
     }
-     @GetMapping("/list")
-     @CrossOrigin(origins = "http://localhost:4200")
-    public List<Authority> listAuthorities() {
-        return authorityRepository.findAll();
+
+    @GetMapping("/list")
+    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<List<Authority>> listAuthorities() {
+        try {
+            List<Authority> authorities = authorityRepository.findAll();
+            return ResponseEntity.ok(authorities);
+        } catch (Exception ex) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error", ex);
+        }
     }
 
     @PostMapping("/create")
-   @CrossOrigin(origins = "http://localhost:4200")
-    public Authority createEvent(@RequestBody Authority newAuthority) {
-        return authorityRepository.save(newAuthority);
+    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<Authority> createAuthority(@RequestBody Authority newAuthority) {
+        try {
+            Authority createdAuthority = authorityRepository.save(newAuthority);
+            return ResponseEntity.status(HttpStatus.CREATED).body(createdAuthority);
+        } catch (Exception ex) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error", ex);
+        }
     }
 
     @DeleteMapping("/delete/{id}")
-   @CrossOrigin(origins = "http://localhost:4200")
-    public void deleteAuthority(@PathVariable Long id) {
-        authorityRepository.deleteById(id);
-    }
-    @PostMapping("/save")
-    public String saveAuthority(@ModelAttribute Authority authority, Model model){
-        authorityRepository.save(authority);
-        return "redirect:/crud/read";
-    }
-    @GetMapping("/update/{id}")
     @CrossOrigin(origins = "http://localhost:4200")
-    public String update(@PathVariable Long id, Model model){
-        Authority authority = authorityRepository.findById(id).orElseThrow(null);
-        model.addAttribute("authority", authority);
-        return "update";}
+    public ResponseEntity<Void> deleteAuthority(@PathVariable Long id) {
+        try {
+            authorityRepository.deleteById(id);
+            return ResponseEntity.noContent().build();
+        } catch (ResponseStatusException ex) {
+            throw ex; // Excepción ya manejada, se relanza
+        } catch (Exception ex) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error", ex);
+        }
+    }
+
+    @PostMapping("/save")
+    public ResponseEntity<Void> saveAuthority(@ModelAttribute Authority authority, Model model) {
+        try {
+            authorityRepository.save(authority);
+            return ResponseEntity.status(HttpStatus.CREATED).build();
+        } catch (Exception ex) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error", ex);
+        }
+    }
+
+    @PutMapping("/update/{id}")
+    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<String> update(@PathVariable Long id, Model model) {
+        try {
+            Authority authority = authorityRepository.findById(id)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Authority not found"));
+            model.addAttribute("authority", authority);
+            return ResponseEntity.ok("authority/update");
+        } catch (ResponseStatusException ex) {
+            throw ex; // Excepción ya manejada, se relanza
+        } catch (Exception ex) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error", ex);
+        }
+    }
 }
