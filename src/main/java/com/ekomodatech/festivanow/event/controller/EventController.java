@@ -18,6 +18,15 @@ import com.ekomodatech.festivanow.event.repository.CityRepository;
 import com.ekomodatech.festivanow.event.repository.EventRepository;
 import com.ekomodatech.festivanow.event.repository.LogisticRepository;
 
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.interfaces.Claim;
+import com.auth0.jwt.interfaces.DecodedJWT;
+import org.springframework.web.bind.annotation.RequestHeader;
+
+
 @RestController
 @RequestMapping("/event")
 public class EventController {
@@ -33,34 +42,76 @@ public class EventController {
     private LogisticRepository logisticRepository;
 
     @GetMapping("/{id}")
-    @CrossOrigin(origins = "http://localhost:4200")
-    public ResponseEntity<Event> findEvent(@PathVariable Long id) {
-        try {
-            Event event = eventRepository.findById(id)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Event not found"));
-            return ResponseEntity.ok(event);
-        } catch (ResponseStatusException ex) {
-            throw ex;
-        }  catch (Exception ex) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error", ex);
+public ResponseEntity<Event> findEvent(@PathVariable Long id, @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+    try {
+        Event event = eventRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Event not found"));
+
+        if (authorizationHeader != null) {
+            
+            String createdBy = getCurrentUsername(authorizationHeader);
+
+            
+            if (!event.getVisibility() || createdBy.equals(event.getCreatedBy())) {
+                return ResponseEntity.ok(event);
+            } else {
+                
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
+            }
+        } else {
+           
+            if (!event.getVisibility()) {
+                return ResponseEntity.ok(event);
+            } else {
+                
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
+            }
         }
+    } catch (ResponseStatusException ex) {
+        throw ex;
+    } catch (Exception ex) {
+        throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error", ex);
     }
+}
+
+
+
 
     @GetMapping("/list")
-    @CrossOrigin(origins = "http://localhost:4200")
-    public ResponseEntity<List<Event>> listEvents() {
+    public ResponseEntity<List<Event>> listAllEvents(@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
         try {
-            List<Event> events = eventRepository.findAll();
+            List<Event> events;
+            String createdBy = getCurrentUsername(authorizationHeader);
+
+            if (createdBy == null || "Usuario Desconocido".equals(createdBy)) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Event not found");
+            } else {
+                events = eventRepository.findByCreatedBy(createdBy);
+            }
+
             return ResponseEntity.ok(events);
         } catch (Exception ex) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error", ex);
         }
     }
 
-    @PostMapping("/create")
-    @CrossOrigin(origins = "http://localhost:4200")
-    public ResponseEntity<Event> createEvent(@RequestBody Event newEvent) {
+    @GetMapping("/list/public")
+    public ResponseEntity<List<Event>> listPublicEvents() {
         try {
+            List<Event> publicEvents = eventRepository.findByVisibilityFalse();
+            return ResponseEntity.ok(publicEvents);
+        } catch (Exception ex) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error", ex);
+        }
+    }
+
+    
+
+    @PostMapping("/create")
+    public ResponseEntity<Event> createEvent(@RequestBody Event newEvent, @RequestHeader("Authorization") String authorizationHeader) {
+        try {
+            String createdBy = getCurrentUsername(authorizationHeader);  
+            newEvent.setCreatedBy(createdBy);
             Event createdEvent = eventRepository.save(newEvent);
             return ResponseEntity.status(HttpStatus.CREATED).body(createdEvent);
         } catch (Exception ex) {
@@ -68,8 +119,32 @@ public class EventController {
         }
     }
 
+    public String getCurrentUsername(String authorizationHeader) {
+        
+        String jwtToken = authorizationHeader.replace("Bearer ", ""); 
+
+        
+        String username = getUsernameFromJWT(jwtToken);
+
+        return username;
+    }
+
+    private String getUsernameFromJWT(String jwtToken) {
+        try {
+            DecodedJWT decodedJWT = JWT.decode(jwtToken);
+            Claim preferredUsernameClaim = decodedJWT.getClaim("preferred_username");
+
+            if (!preferredUsernameClaim.isNull()) {
+                return preferredUsernameClaim.asString();
+            }
+        } catch (Exception e) {
+            
+        }
+
+        return "Usuario Desconocido";
+    }
+
     @PutMapping("/update/{id}")
-    @CrossOrigin(origins = "http://localhost:4200")
     public ResponseEntity<String> updateEvent(@PathVariable Long id, @RequestBody Event updatedEvent) {
         try {
             Event event = eventRepository.findById(id)
@@ -83,6 +158,8 @@ public class EventController {
             event.setType(updatedEvent.getType());
             event.setUrl(updatedEvent.getUrl());
             event.setState(updatedEvent.getState());
+            event.setDirection(updatedEvent.getDirection());
+            event.setVisibility(updatedEvent.getVisibility());
 
             // Guarda el evento actualizado en el repositorio
             eventRepository.save(event);
@@ -97,7 +174,6 @@ public class EventController {
 
 
     @DeleteMapping("/delete/{id}")
-    @CrossOrigin(origins = "http://localhost:4200")
     public ResponseEntity<Void> deleteEvent(@PathVariable Long id) {
         try {
             Event event = eventRepository.findById(id)
@@ -110,7 +186,6 @@ public class EventController {
     }
 
     @GetMapping("/city/{id}")
-    @CrossOrigin(origins = "http://localhost:4200")
     public ResponseEntity<City> findCity(@PathVariable Long id) {
         try {
             City city = cityRepository.findById(id)
@@ -122,7 +197,6 @@ public class EventController {
     }
 
     @GetMapping("/listCity")
-    @CrossOrigin(origins = "http://localhost:4200")
     public ResponseEntity<List<City>> listCities() {
         try {
             List<City> cities = cityRepository.findAll();
@@ -133,7 +207,6 @@ public class EventController {
     }
 
     @GetMapping("/logistic/{id}")
-    @CrossOrigin(origins = "http://localhost:4200")
     public ResponseEntity<Logistic> findLogistic(@PathVariable Long id) {
         try {
             Logistic logistic = logisticRepository.findById(id)
@@ -145,7 +218,6 @@ public class EventController {
     }
 
     @GetMapping("/listLogistic")
-    @CrossOrigin(origins = "http://localhost:4200")
     public ResponseEntity<List<Logistic>> listLogistics() {
         try {
             List<Logistic> logistics = logisticRepository.findAll();
@@ -159,4 +231,6 @@ public class EventController {
     String index() {
         return "index";
     }
+    
+
 }
