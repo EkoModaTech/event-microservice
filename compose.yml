@@ -14,8 +14,8 @@ services:
       IP_HOST: ${IP_HOST}
       PORT_HOST: ${PORT_HOST}
       URL_DATABASE: ${URL_DATABASE}
+    restart: always  
 
-  
   event-microservice-qa:
     build: .
     container_name: event-microservice-qa
@@ -29,3 +29,5 @@ services:
       IP_HOST: ${IP_HOST}
       PORT_HOST: ${PORT_HOST_QA}
       URL_DATABASE: ${URL_DATABASE_QA}
+    restart: always  
+
